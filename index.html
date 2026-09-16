@@ -24,7 +24,7 @@ footer button{background:var(--acc);color:#fff;border:0;border-radius:10px;paddi
 </style></head><body>
 <header><h1>מי זה בתמונה?</h1><div class="sub" id="count">טוען…</div><div class="bar"><i id="prog"></i></div>
 <div class="tools"><select id="fm"><option value="">כל השווקים</option></select><select id="fs"><option value="open">רק מה שנשאר</option><option value="all">הכל</option></select></div></header>
-<main><div class="intro">היי לוטם 🙂 אלה תמונות וסרטונים מהשווקים הקודמים שלא בטוח מי היצרן בהם. בכל כרטיס: <b>כן</b> אם זה היצרן, <b>לא</b> אם לא (ואז אפשר לבחור מי כן), או <b>לא יודעת</b>. לחיצה על תמונה מגדילה אותה. הכל נשמר אוטומטית, אפשר לעצור ולחזור. בסוף לוחצים "סיימתי".</div><div id="list"></div></main>
+<main><div class="intro">היי לוטם 🙂 אלה תמונות וסרטונים מהשווקים הקודמים שלא בטוח מי היצרן בהם. בכל כרטיס: <b>כן</b> אם זה היצרן, <b>לא</b> אם לא, או <b>לא יודעת</b>. בכל כרטיס אפשר גם לבחור יצרן מהרשימה של אותו שבוע, או פשוט לכתוב את השם בשדה הפתוח, גם אם הוא לא ברשימה. לחיצה על תמונה מגדילה אותה. הכל נשמר אוטומטית, אפשר לעצור ולחזור. בסוף לוחצים "סיימתי".</div><div id="list"></div></main>
 <footer><span class="sub" id="done"></span><button id="send">סיימתי, העתיקי את התשובות</button></footer>
 <div id="zoom" hidden><img id="zi"></div>
 <script>
@@ -33,20 +33,21 @@ const K='mipo-review-v1';try{ans=JSON.parse(localStorage.getItem(K)||'{}')}catch
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(ans))}catch(e){};stat()};
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const mname=m=>m==='november-end'?'סוף נובמבר':m;
-function stat(){const n=cards.filter(c=>ans[c.id]&&(ans[c.id].a==='yes'||ans[c.id].a==='q'||ans[c.id].pick)).length;
+function stat(){const done=c=>{const v=ans[c.id];return v&&(v.a==='yes'||v.a==='q'||v.pick||(v.text||'').trim())};const n=cards.filter(done).length;
 $('count').textContent=`${n} מתוך ${cards.length} כרטיסים`;$('prog').style.width=(cards.length?n/cards.length*100:0)+'%';$('done').textContent=n?`נענו ${n}`:''}
 const $=i=>document.getElementById(i);
 function render(){const fm=$('fm').value,fs=$('fs').value;
-$('list').innerHTML=cards.filter(c=>(!fm||c.market===fm)&&(fs==='all'||!(ans[c.id]&&(ans[c.id].a==='yes'||ans[c.id].a==='q'||ans[c.id].pick)))).slice(0,60).map(c=>{
+const isDone=c=>{const v=ans[c.id];return v&&(v.a==='yes'||v.a==='q'||v.pick||(v.text||'').trim())};
+$('list').innerHTML=cards.filter(c=>(!fm||c.market===fm)&&(fs==='all'||!isDone(c))).slice(0,60).map(c=>{
 const a=ans[c.id]||{};const o=c.opts[0];const opts=(lists[c.market]||[]);
 const q=c.kind==='check'?`זה <b>${esc(o.name)}</b>?`:(c.opts.length?`מי זה? אולי ${c.opts.map(x=>'<b>'+esc(x.name)+'</b>').join(' או ')}`:'מי היצרן כאן?');
 const yesBtns=c.kind==='check'?`<button class="yes ${a.a==='yes'?'on':''}" data-a="yes">כן</button><button class="no ${a.a==='no'?'on':''}" data-a="no">לא</button>`:c.opts.map(x=>`<button class="yes ${a.pick===x.id?'on':''}" data-p="${x.id}">${esc(x.name)}</button>`).join('')+`<button class="no ${a.a==='no'?'on':''}" data-a="no">מישהו אחר</button>`;
-const showPick=a.a==='no';
-return `<div class="card ${a.a||a.pick?'done':''}" data-id="${esc(c.id)}"><div class="meta"><span>שוק ${esc(mname(c.market))}</span><span>${c.count} קבצים</span></div>
+const showPick=true;
+return `<div class="card ${a.a||a.pick||(a.text||'').trim()?'done':''}" data-id="${esc(c.id)}"><div class="meta"><span>שוק ${esc(mname(c.market))}</span><span>${c.count} קבצים</span></div>
 <div class="imgs">${c.imgs.map(s=>`<img loading="lazy" src="${s}">`).join('')}</div>
 <div class="q">${q}</div><div class="what">${c.kind==='check'&&o.what?esc(o.what):esc(c.products)}</div>
 <div class="btns">${yesBtns}<button class="q ${a.a==='q'?'on':''}" data-a="q">לא יודעת</button></div>
-${showPick?`<div class="pick"><select data-s><option value="">מי זה? (הרשימה של אותו שבוע)</option>${opts.map(x=>`<option value="${esc(x.id||x.name)}" ${a.pick===(x.id||x.name)?'selected':''}>${esc(x.name)}</option>`).join('')}<option value="__none" ${a.pick==='__none'?'selected':''}>זה לא דוכן</option></select><input data-t placeholder="או לכתוב שם" value="${esc(a.text||'')}"></div>`:''}
+${showPick?`<div class="pick"><select data-s><option value="">בחרי מהרשימה של אותו שבוע</option>${opts.map(x=>`<option value="${esc(x.id||x.name)}" ${a.pick===(x.id||x.name)?'selected':''}>${esc(x.name)}</option>`).join('')}<option value="__none" ${a.pick==='__none'?'selected':''}>זה לא דוכן</option></select><input data-t placeholder="או כתבי כאן שם אחר" value="${esc(a.text||'')}"></div>`:''}
 </div>`}).join('')||'<div class="intro">אין כאן כרטיסים פתוחים 🎉</div>'}
 document.addEventListener('click',e=>{const img=e.target.closest('.imgs img');if(img){$('zi').src=img.src;$('zoom').hidden=false;return}
 if(e.target.id==='zoom'||e.target.id==='zi'){$('zoom').hidden=true;return}
